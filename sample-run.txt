@@ -1,4 +1,3 @@
-
 Limited coupon drop: 100 coupons, one per person
 200 users, 30% of them press again after no response
 Redis 127.0.0.1:6399
@@ -9,14 +8,14 @@ sending 260 requests at once
                                            issued   people   got 2+
 --------------------------------------------------------------------
 A. INCR only, no per-user check               100       87       13
-B. per-user check added                       100       88       12
+B. per-user check added                       100       91        9
 C. check and register in one script           100      100        0
 --------------------------------------------------------------------
 
 the same implementation B, checked by two tests
 
   Test 1  260 distinct users, all at once        PASS   issued 100, got 2+ 0
-  Test 2  30% of them press again                FAIL   issued 100, got 2+ 10
+  Test 2  30% of them press again                FAIL   issued 100, got 2+ 6
 
   write only Test 1 and this implementation ships
 
@@ -26,4 +25,3 @@ MULTI with a second command that fails
   value after   11
 
   it stays at 11. nothing rolls back
-
