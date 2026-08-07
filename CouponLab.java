@@ -139,9 +139,8 @@ public class CouponLab {
     }
 
     static final String SCRIPT = """
-            if redis.call('SISMEMBER', KEYS[1], ARGV[1]) == 1 then return -1 end
             if redis.call('SCARD', KEYS[1]) >= tonumber(ARGV[2]) then return -2 end
-            redis.call('SADD', KEYS[1], ARGV[1])
+            if redis.call('SADD', KEYS[1], ARGV[1]) == 0 then return -1 end
             return redis.call('SCARD', KEYS[1])
             """;
 

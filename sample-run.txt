@@ -7,15 +7,15 @@ sending 260 requests at once
 --------------------------------------------------------------------
                                            issued   people   got 2+
 --------------------------------------------------------------------
-A. INCR only, no per-user check               100       87       13
-B. per-user check added                       100       91        9
+A. INCR only, no per-user check               100       89       11
+B. per-user check added                       100       87       13
 C. check and register in one script           100      100        0
 --------------------------------------------------------------------
 
 the same implementation B, checked by two tests
 
   Test 1  260 distinct users, all at once        PASS   issued 100, got 2+ 0
-  Test 2  30% of them press again                FAIL   issued 100, got 2+ 6
+  Test 2  30% of them press again                FAIL   issued 100, got 2+ 7
 
   write only Test 1 and this implementation ships
 
