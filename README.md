@@ -37,21 +37,27 @@ Three numbers come back: coupons issued, people who got one, and people who got 
 
 ```
                                         issued          people          got 2+
-A. INCR only, no per-user check      100.0 (100)   87.3 (84-91)   12.7 (9-16)
-B. per-user check added              100.0 (100)   87.8 (84-93)   12.2 (7-16)
-C. unique constraint plus a counter   88.8 (85-93)  88.8 (85-93)    0.0 (0)
+A. INCR only, no per-user check      100.0 (100)   87.4 (85-93)   12.6 (7-15)
+B. per-user check added              100.0 (100)   88.9 (85-93)   11.1 (7-15)
+C. count first, then register         88.4 (85-93)  88.4 (85-93)    0.0 (0)
+E. register first, then count        100.0 (100)  100.0 (100)      0.0 (0)
 D. one script for both               100.0 (100)  100.0 (100)      0.0 (0)
 ```
 
-The stock is exact everywhere. `INCR` is atomic, so the 101st coupon never goes out.
+**A and B do not separate.** Adding the per-user check moves the distinct-winner
+count from 87.4 to 88.9, inside the run-to-run spread. Two requests that overlap
+walk through the check side by side.
 
-**A and B do not separate.** 87.3 distinct winners before the per-user check, 87.8 after it.
-Adding the check changed nothing measurable, because a network round trip sits between the
-check and the registration and the same user's two requests walk through it side by side.
+**C never issues a duplicate, and never issues 100 coupons either.** The counter
+takes a slot before the registration is refused, so on average twelve coupons go
+to nobody. The failure changes shape rather than going away.
 
-**C never issues a duplicate, and never issues 100 coupons either.** The constraint refuses the second request after the counter has already taken a slot, so on average eleven coupons go to nobody. The failure changes shape rather than going away.
-
-D handed 100 coupons to 100 people on every one of the 30 runs.
+**E and D look identical here, and they are not.** Reverse the two commands and
+the three metrics come out perfect. But read the keys afterwards: the roster holds
+200 members, because everyone who was turned away at the limit is still recorded
+as having tried. The set is no longer a list of winners, and those users are
+permanently answered "already participated". D keeps the roster at 100 because
+counting and recording are the same operation.
 
 ## The same code, two tests
 
