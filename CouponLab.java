@@ -44,9 +44,10 @@ public class CouponLab {
 
         Result a = run(buildLoad(true), Impl.INCR_ONLY, "A. INCR only, no per-user check");
         Result b = run(buildLoad(true), Impl.CHECK_THEN_ISSUE, "B. per-user check added");
-        Result c = run(buildLoad(true), Impl.ATOMIC_SCRIPT, "C. check and register in one script");
+        Result c = run(buildLoad(true), Impl.UNIQUE_PLUS_COUNTER, "C. unique constraint plus a counter");
+        Result d = run(buildLoad(true), Impl.ATOMIC_SCRIPT, "D. one script for both");
 
-        table(List.of(a, b, c));
+        table(List.of(a, b, c, d));
 
         sameCodeTwoTests();
         rollbackDemo();
@@ -76,7 +77,7 @@ public class CouponLab {
 
     // -------------------------------------------------------------- runner
 
-    enum Impl { INCR_ONLY, CHECK_THEN_ISSUE, ATOMIC_SCRIPT }
+    enum Impl { INCR_ONLY, CHECK_THEN_ISSUE, UNIQUE_PLUS_COUNTER, ATOMIC_SCRIPT }
 
     record Result(String name, int issued, int people, int gotTwoOrMore, int failed) {}
 
@@ -129,6 +130,14 @@ public class CouponLab {
                 if (n > LIMIT) return false;                          // stock left
                 r.cmd("SADD", "coupon:winners", uid);
                 return true;
+            }
+            case UNIQUE_PLUS_COUNTER -> {
+                // the roster stands in for a UNIQUE (event_id, user_id) index:
+                // it refuses the second insert, but the counter has already moved
+                long n = (Long) r.cmd("INCR", "coupon:count");
+                if (n > LIMIT) return false;                          // sold out
+                long added = (Long) r.cmd("SADD", "coupon:winners", uid);
+                return added == 1;                                    // 0 means the constraint refused it
             }
             case ATOMIC_SCRIPT -> {
                 Object v = r.cmd("EVAL", SCRIPT, "1", "coupon:winners", uid, String.valueOf(LIMIT));

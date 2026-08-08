@@ -28,26 +28,30 @@ Three implementations serve the identical load.
 |---|---|
 | **A** | `INCR` for the stock count. No per-user check at all. |
 | **B** | `SISMEMBER` to enforce one per person, then `INCR`, then `SADD`. |
-| **C** | One Lua script that reads `SADD`'s return value, so the check and the registration are the same operation. |
+| **C** | The roster stands in for a UNIQUE (event_id, user_id) index: it refuses the second issue, but the counter has already moved. |
+| **D** | One Lua script that reads `SADD`'s return value, so counting and recording are the same operation. |
 
 Three numbers come back: coupons issued, people who got one, and people who got two or more.
 
 ## Results, 30 runs
 
 ```
-                                        issued        people         got 2+
-A. INCR only, no per-user check            100   86.9 (85-91)   13.1 (9-15)
-B. per-user check added                    100   87.4 (84-93)   12.6 (7-16)
-C. check and register in one script        100  100.0 (100)      0.0 (0)
+                                        issued          people          got 2+
+A. INCR only, no per-user check      100.0 (100)   87.3 (84-91)   12.7 (9-16)
+B. per-user check added              100.0 (100)   87.8 (84-93)   12.2 (7-16)
+C. unique constraint plus a counter   88.8 (85-93)  88.8 (85-93)    0.0 (0)
+D. one script for both               100.0 (100)  100.0 (100)      0.0 (0)
 ```
 
 The stock is exact everywhere. `INCR` is atomic, so the 101st coupon never goes out.
 
-**A and B do not separate.** 86.9 distinct winners before the per-user check, 87.4 after it.
+**A and B do not separate.** 87.3 distinct winners before the per-user check, 87.8 after it.
 Adding the check changed nothing measurable, because a network round trip sits between the
 check and the registration and the same user's two requests walk through it side by side.
 
-C handed 100 coupons to 100 people on every one of the 30 runs.
+**C never issues a duplicate, and never issues 100 coupons either.** The constraint refuses the second request after the counter has already taken a slot, so on average eleven coupons go to nobody. The failure changes shape rather than going away.
+
+D handed 100 coupons to 100 people on every one of the 30 runs.
 
 ## The same code, two tests
 
